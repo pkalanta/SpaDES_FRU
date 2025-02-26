@@ -11,7 +11,7 @@ out <- SpaDES.project::setupProject(
   paths = list(projectPath = "~/SpaDES_FRU", #on scfmLandcoverInit.R param" flammabilityThreshold = 0.05
                cachePath = "cache", 
                inputPath = "inputs",
-               outputPath = "outputs/withTwoPolys",
+               outputPath = "outputs/TwoPolys_th0.1",
                modulePath = "modules"),
   modules = c("PredictiveEcology/Biomass_borealDataPrep@main",
               "PredictiveEcology/Biomass_core@main",
@@ -67,15 +67,13 @@ out <- SpaDES.project::setupProject(
   },
   rasterToMatchCalibration = rasterToMatchLarge, 
   studyAreaCalibration= studyAreaLarge,
-  fireRegimePolysCalibration = sf::st_as_sf(studyAreaCalibration),
-  fireRegimePolys = sf::st_as_sf(studyArea),
   sppEquiv = {
     speciesInStudy <- LandR::speciesInStudyArea(studyAreaLarge)
     species <- LandR::equivalentName(speciesInStudy$speciesList, df = LandR::sppEquivalencies_CA, "LandR")
     sppEquiv <- LandR::sppEquivalencies_CA[LandR %in% species]
     sppEquiv <- sppEquiv[KNN != "" & LANDIS_traits != ""] #avoid a bug with shore pine
   }, 
-  fireRegimePolysLarge = {
+    fireRegimePolysCalibration = {
     ecoDistricts <- scfmutils::prepInputsFireRegimePolys(studyArea = studyAreaLarge, 
                                                          type = "ECODISTRICT")
     
@@ -93,12 +91,15 @@ out <- SpaDES.project::setupProject(
     # Ensure integer attributes
     ecoDistricts$newPolyID <- as.integer(ecoDistricts$newPolyID)
     ecoDistricts$PolyID <- as.integer(ecoDistricts$newPolyID)
-    # Return the object
-    ecoDistricts
-    }
+    return(ecoDistricts)
+  },
+  fireRegimePolys = {
+    fireRegimePolys <- reproducible::postProcess(fireRegimePolysCalibration, 
+                                                 to = studyArea)
+  }
 )
 
 outSim <- do.call(SpaDES.core::simInitAndSpades, out)
 
-source("postSim_Analysis.R")
+
 
